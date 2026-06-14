@@ -1,0 +1,3 @@
+Il risultato è ottimo per una GTX 1650:
+735 inferenze/secondo con latenza media di ~1.4ms — per un segnale 1D è eccellente. A confronto, ONNX Runtime su CPU tipicamente sta sui 5-15ms per reti simili.
+Il warning sulla varianza (7%) è normale su una GPU consumer senza clock bloccato, non è un problema reale.

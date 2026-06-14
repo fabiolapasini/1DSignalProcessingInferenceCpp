@@ -1,0 +1,12 @@
+
+uv pip install onnxruntime-gpu
+cd C:\Program Files\NVIDIA GPU Computing Toolkit\TensorRT\v8.5.1.7\bin\trtexec 
+
+
+
+- TRASFORM THE MODEL
+	trtexec --onnx=C:\Users\fabio\Documents\GitHub\1DSignalProcessing\networks\peak_detection_model.onnx --saveEngine=C:\Users\fabio\Documents\GitHub\1DSignalProcessing\networks\net.trt --fp16 --verbose
+
+- TEST INFERENCE
+	trtexec --loadEngine=C:\Users\fabio\Documents\GitHub\1DSignalProcessing\networks\net.trt
+	trtexec --loadEngine=C:\Users\fabio\Documents\GitHub\1DSignalProcessing\networks\net.trt --useSpinWait --verbose *> "$HOME\Desktop\TensoRT_load_engine.txt"

@@ -1,0 +1,21 @@
+{
+  "dependencies": [
+    "fmt",
+    "argparse",
+    "nlohmann-json",
+    {
+      "name": "log4cxx",
+      "version>=": "0.12.1"
+    },
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": [
+        "jpeg",
+        "png",
+        "tiff"
+      ],
+      "version>=": "4.5.1"
+    }
+  ]
+}

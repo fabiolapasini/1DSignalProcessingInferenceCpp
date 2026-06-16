@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  1d_signal_inference:
+    # Path to the Dockerfile context (current directory)
+    build:
+      context: .
+      dockerfile: Dockerfile
+    
+    # Custom name for the running container
+    container_name: inference_cpp_container
+    
+    # Automatically restart the container if it crashes or the daemon restarts
+    restart: always
+    
+    # Enable NVIDIA GPU hardware acceleration inside the container
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+              
+    # Map the local 'output_logs' directory to the container's '/app/logs' directory
+    volumes:
+      - ./output_logs:/app/logs

@@ -1,4 +1,5 @@
 {
+  "builtin-baseline": "ce613c41656fde8e29d27b2c3d5e1e1989e0c86e",
   "dependencies": [
     "fmt",
     "argparse",

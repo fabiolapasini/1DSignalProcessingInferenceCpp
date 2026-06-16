@@ -54,11 +54,9 @@ std::vector<char> LoadEngine(const std::string& path)
 size_t GetTensorSize(nvinfer1::IExecutionContext& ctx, const char* name)
 {
 	nvinfer1::Dims dims = ctx.getTensorShape(name);
-
 	size_t total = 1;
 	for (int i = 0; i < dims.nbDims; i++)
 		total *= dims.d[i];
-
 	return total * sizeof(float);
 }
 
@@ -84,10 +82,8 @@ void PrintEngineInfo(nvinfer1::ICudaEngine* engine)
 			std::cout << dims.d[d];
 			if (d < dims.nbDims - 1) std::cout << ", ";
 		}
-
 		std::cout << "]\n\n";
 	}
-
 	std::cout << "=========================================\n\n";
 }
 
@@ -127,19 +123,14 @@ void LoadTestSignal(std::vector<float>& signal)
 		throw std::runtime_error("Cannot open test_signal.raw");
 	}
 
-	file.read(
-		reinterpret_cast<char*>(signal.data()),
-		1024 * sizeof(float)
-	);
-
+	file.read( reinterpret_cast<char*>(signal.data()), 1024 * sizeof(float));
 	if (!file) {
 		throw std::runtime_error("Failed to read full signal");
 	}
 }
 
 
-void DrawPeaks(
-	const std::vector<float>& signal, const std::vector<float>& pt_positions, cv::Mat& canvas, int row)
+void DrawPeaks( const std::vector<float>& signal, const std::vector<float>& pt_positions, cv::Mat& canvas, int row)
 {
 	int width = 1024;
 	int height = 300;
@@ -152,7 +143,10 @@ void DrawPeaks(
 	float min_v = *std::min_element(signal.begin(), signal.end());
 	float max_v = *std::max_element(signal.begin(), signal.end());
 	auto toY = [&](float v) {
-		return height - (int)((v - min_v) / (max_v - min_v + 1e-6f) * (height - 20)) - 10;
+		return height - 
+			(int)((v - min_v) / (max_v - min_v + 1e-6f) // stretching
+				* (height - 20)) 
+			- 10; // upside down
 	};
 
 	// draw signal
@@ -216,6 +210,7 @@ void RunInference(nvinfer1::ICudaEngine* engine, nvinfer1::IExecutionContext* co
 	// input gpu tensor
 	gpuErrChk(cudaMalloc(&input_buffer, input_size));
 	gpuErrChk(cudaMemset(input_buffer, 0, input_size));
+	// to GPU
 	gpuErrChk(cudaMemcpy(input_buffer, input_signal.data(), input_size, cudaMemcpyHostToDevice));
 	context->setTensorAddress(input_name, input_buffer);
 
@@ -249,6 +244,7 @@ void RunInference(nvinfer1::ICudaEngine* engine, nvinfer1::IExecutionContext* co
 	heights.resize(heights_size / sizeof(float));
 	widths.resize(widths_size / sizeof(float));
 
+	// from CPU to GPU
 	gpuErrChk(cudaMemcpy(positions.data(), positions_buffer, positions_size, cudaMemcpyDeviceToHost));
 	gpuErrChk(cudaMemcpy(heights.data(), heights_buffer, heights_size, cudaMemcpyDeviceToHost));
 	gpuErrChk(cudaMemcpy(widths.data(), widths_buffer, widths_size, cudaMemcpyDeviceToHost));
@@ -266,7 +262,10 @@ void RunInference(nvinfer1::ICudaEngine* engine, nvinfer1::IExecutionContext* co
 
 int main()
 {
-	nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(g_logger);
+	// anche python per completezza
+	// to do seguire la guida: https://docs.nvidia.com/deeplearning/tensorrt/latest/getting-started/quick-start-guide.html
+	// nvinfer1::IRuntime* runtime = nvinfer1::createInferRuntime(g_logger);
+	std::unique_ptr<nvinfer1::IRuntime> runtime{nvinfer1::createInferRuntime(g_logger)};
 	if (!runtime) {
 		std::cerr << "Failed to create runtime\n";
 		return -1;
@@ -277,6 +276,7 @@ int main()
 	nvinfer1::ICudaEngine* engine =
 		runtime->deserializeCudaEngine(engine_data.data(), engine_data.size());
 
+	// todo : use logger, and throw if error
 	if (!engine) {
 		std::cerr << "Engine load failed\n";
 		return -1;
@@ -287,8 +287,8 @@ int main()
 	nvinfer1::IExecutionContext* context = engine->createExecutionContext();
 	if (!context) {
 		std::cerr << "Context creation failed\n";
-		engine->destroy();
-		runtime->destroy();
+		delete engine;
+		// delete runtime;
 		return -1;
 	}
 
@@ -326,12 +326,14 @@ int main()
 	cv::Mat canvas(300, 1024, CV_8UC3, cv::Scalar(255, 255, 255));
 	DrawPeaks(input_signal, positions, canvas, 0);
 	cv::imshow("tensorRT_pred", canvas);
+	cv::waitKey(4000);
+	cv::destroyWindow("tensorRT_pred");
 	cv::imwrite("tensorRT_pred.png", canvas);
 
 	// cleanup
-	context->destroy();
-	engine->destroy();
-	runtime->destroy();
+	delete context;
+	delete engine;
+	// delete runtime;
 
 	return 0;
 }

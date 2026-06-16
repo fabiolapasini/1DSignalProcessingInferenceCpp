@@ -9,41 +9,44 @@ find_package(nlohmann_json CONFIG REQUIRED)
 find_package(log4cxx CONFIG REQUIRED)
 
 # -------------------------
-# CUDA
+# CUDA (Native cross-platform detection)
 # -------------------------
-set(CUDA_PATH $ENV{CUDA_PATH})
-
-target_include_directories(Inference PRIVATE
-    ${CUDA_PATH}/include
-)
-
-target_link_directories(Inference PRIVATE
-    ${CUDA_PATH}/lib/x64
-)
+find_package(CUDAToolkit REQUIRED)
 
 # -------------------------
 # TensorRT
 # -------------------------
 set(TENSORRT_ROOT $ENV{TENSORRT_ROOT})
-
-add_library(nvinfer SHARED IMPORTED)
-set_target_properties(nvinfer PROPERTIES
-    IMPORTED_LOCATION "${TENSORRT_ROOT}/lib/nvinfer.dll"
-    IMPORTED_IMPLIB "${TENSORRT_ROOT}/lib/nvinfer.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "${TENSORRT_ROOT}/include"
-)
-
-add_library(nvonnxparser SHARED IMPORTED)
-set_target_properties(nvonnxparser PROPERTIES
-    IMPORTED_LOCATION "${TENSORRT_ROOT}/lib/nvonnxparser.dll"
-    IMPORTED_IMPLIB "${TENSORRT_ROOT}/lib/nvonnxparser.lib"
-    INTERFACE_INCLUDE_DIRECTORIES "${TENSORRT_ROOT}/include"
-)
+if(WIN32)
+    add_library(nvinfer SHARED IMPORTED)
+    set_target_properties(nvinfer PROPERTIES
+        IMPORTED_LOCATION "${TENSORRT_ROOT}/lib/nvinfer.dll"
+        IMPORTED_IMPLIB "${TENSORRT_ROOT}/lib/nvinfer.lib"
+        INTERFACE_INCLUDE_DIRECTORIES "${TENSORRT_ROOT}/include"
+    )
+    add_library(nvonnxparser SHARED IMPORTED)
+    set_target_properties(nvonnxparser PROPERTIES
+        IMPORTED_LOCATION "${TENSORRT_ROOT}/lib/nvonnxparser.dll"
+        IMPORTED_IMPLIB "${TENSORRT_ROOT}/lib/nvonnxparser.lib"
+        INTERFACE_INCLUDE_DIRECTORIES "${TENSORRT_ROOT}/include"
+    )
+else()
+    add_library(nvinfer SHARED IMPORTED)
+    set_target_properties(nvinfer PROPERTIES
+        IMPORTED_LOCATION "/usr/lib/x86_64-linux-gnu/libnvinfer.so"
+        INTERFACE_INCLUDE_DIRECTORIES "/usr/include"
+    )
+    add_library(nvonnxparser SHARED IMPORTED)
+    set_target_properties(nvonnxparser PROPERTIES
+        IMPORTED_LOCATION "/usr/lib/x86_64-linux-gnu/libnvonnxparser.so"
+        INTERFACE_INCLUDE_DIRECTORIES "/usr/include"
+    )
+endif()
 
 # -------------------------
 # Copy Assets (IMPORTANT)
 # -------------------------
-set(OUTPUT_DIR $<TARGET_FILE_DIR:Inference>/Assets)
+set(OUTPUT_DIR ${CMAKE_BINARY_DIR}/Assets)
 add_custom_command(TARGET Inference POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${OUTPUT_DIR}
 )
@@ -59,7 +62,7 @@ add_custom_command(TARGET Inference POST_BUILD
 )
 
 # -------------------------
-# Link
+# Link Libraries
 # -------------------------
 target_link_libraries(Inference PRIVATE
     fmt::fmt
@@ -71,5 +74,5 @@ target_link_libraries(Inference PRIVATE
     nvinfer
     nvonnxparser
 
-    "${CUDA_PATH}/lib/x64/cudart.lib"
+    CUDA::cudart
 )
